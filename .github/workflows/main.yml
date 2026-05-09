@@ -7,7 +7,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ESP8266 Toolchain
+      - name: Install Toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-xtensa-lx106 binutils-xtensa-lx106 make
@@ -15,24 +15,27 @@ jobs:
       - name: Compile rBoot
         run: |
           mkdir -p firmware
+          # 1. Sari files ko root mein copy karo (taki path ka koi chakkar na rahe)
+          find . -name "*.c" -exec cp {} . \;
+          find . -name "*.h" -exec cp {} . \;
+          find . -name "*.ld" -exec cp {} . \;
+
+          # 2. Stage 2a compile karo (Ye sabse zaruri hai)
+          xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot-stage2a.c -o rboot-stage2a.o
           
-          # Sari files ko folder ke root mein rakho
-          # Aur compiler ko bolo ki current directory (.) mein sab dhoonde
+          # 3. Stage 2a ki link file banao
+          xtensa-lx106-elf-ld -Trboot-stage2a.ld rboot-stage2a.o -o rboot-stage2a.elf
           
+          # 4. Main rBoot compile karo
           xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot.c -o rboot.o
           
-          # Agar rboot.o ban gaya, toh binary banao
-          if [ -f rboot.o ]; then
-            xtensa-lx106-elf-objcopy --only-section .text --output-target binary rboot.o firmware/rboot.bin
-            echo "Success! Binary generated."
-          else
-            echo "Failed to create object file."
-            exit 1
-          fi
+          # 5. Final Binary banao
+          xtensa-lx106-elf-objcopy --only-section .text --output-target binary rboot.o firmware/rboot.bin
+          
+          echo "Process Finished"
 
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: rboot-binary-file
           path: firmware/rboot.bin
-          
