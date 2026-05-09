@@ -1,0 +1,36 @@
+name: Build rBoot
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install ESP8266 Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-xtensa-lx106 binutils-xtensa-lx106 make
+
+      - name: Compile rBoot
+        run: |
+          # 1. Makefile fix (esptool2 ka jhamela khatam)
+          sed -i 's|ESPTOOL2 ?= ../esptool2/esptool2|ESPTOOL2 = esptool2|g' Makefile
+          
+          # 2. Output folder banao agar nahi hai
+          mkdir -p firmware
+          
+          # 3. Compile karo
+          make clean
+          make
+          
+          # 4. Agar esptool2 nahi hai (jo ki nahi hoga), toh stage2a.elf se seedha .bin banao
+          if [ ! -f firmware/rboot.bin ]; then
+            xtensa-lx106-elf-objcopy --only-section .text --output-target binary build/rboot-stage2a.elf firmware/rboot.bin
+          fi
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: rboot-binary-file
+          path: firmware/rboot.bin
