@@ -12,29 +12,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-xtensa-lx106 binutils-xtensa-lx106 make
 
-      - name: Fix Paths and Compile
+      - name: Force Fix and Compile
         run: |
           mkdir -p firmware
-          # 1. Jahan bhi files hain unhe dhoond kar bahar lao
+          # 1. Sabhi files ko ek hi folder mein jama karo (koi folder ka chakkar hi khatam)
           find . -name "*.c" -exec cp {} . \;
           find . -name "*.h" -exec cp {} . \;
           find . -name "*.ld" -exec cp {} . \;
-          
-          # 2. Ab compiler ko sab kuch samne milega (-I. ka matlab isi folder mein dhoondo)
-          xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot.c -o rboot.o
-          xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot-api.c -o rboot-api.o
-          
-          # 3. Binary banao
+
+          # 2. Direct compilation: rboot.c ke liye jo files chahiye wo sab include karo
+          # Hum sirf main rboot.bin par focus karenge jo aapko chahiye
+          xtensa-lx106-elf-gcc -I. -O2 -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot.c -o rboot.o
+
+          # 3. Agar rboot.o ban gaya toh turant .bin banao
           if [ -f rboot.o ]; then
             xtensa-lx106-elf-objcopy --only-section .text --output-target binary rboot.o firmware/rboot.bin
-            echo "Success: File created!"
+            echo "Success: rboot.bin generated!"
           else
-            echo "Error: Compilation failed"
+            echo "Failed to create rboot.o"
             exit 1
           fi
 
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
-          name: rboot-binary
+          name: rboot-binary-file
           path: firmware/rboot.bin
+          
