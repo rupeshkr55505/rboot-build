@@ -14,12 +14,20 @@ jobs:
 
       - name: Compile rBoot
         run: |
-          sed -i 's|ESPTOOL2 ?= ../esptool2/esptool2|ESPTOOL2 = esptool2|g' Makefile
+          # 1. Output folder banao
           mkdir -p firmware
-          make clean
-          make
-          if [ ! -f firmware/rboot.bin ]; then
-            xtensa-lx106-elf-objcopy --only-section .text --output-target binary build/rboot-stage2a.elf firmware/rboot.bin
+          
+          # 2. Zabardasti compilation (Direct Command)
+          # Hum Makefile ke nakhre nahi jhelenge, seedha GCC chalayenge
+          xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot.c -o rboot.o
+          
+          # 3. Check karo file bani ya nahi, phir binary mein badlo
+          if [ -f rboot.o ]; then
+            xtensa-lx106-elf-objcopy --only-section .text --output-target binary rboot.o firmware/rboot.bin
+            echo "Success! Binary generated."
+          else
+            echo "Error: rboot.o was not created!"
+            exit 1
           fi
 
       - name: Upload Binary
@@ -27,4 +35,3 @@ jobs:
         with:
           name: rboot-binary-file
           path: firmware/rboot.bin
-          
