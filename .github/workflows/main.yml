@@ -14,19 +14,19 @@ jobs:
 
       - name: Compile rBoot
         run: |
-          # 1. Output folder banao
           mkdir -p firmware
           
-          # 2. Zabardasti compilation (Direct Command)
-          # Hum Makefile ke nakhre nahi jhelenge, seedha GCC chalayenge
+          # Sari files ko folder ke root mein rakho
+          # Aur compiler ko bolo ki current directory (.) mein sab dhoonde
+          
           xtensa-lx106-elf-gcc -I. -O2 -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -DUser_no_irom_section -c rboot.c -o rboot.o
           
-          # 3. Check karo file bani ya nahi, phir binary mein badlo
+          # Agar rboot.o ban gaya, toh binary banao
           if [ -f rboot.o ]; then
             xtensa-lx106-elf-objcopy --only-section .text --output-target binary rboot.o firmware/rboot.bin
             echo "Success! Binary generated."
           else
-            echo "Error: rboot.o was not created!"
+            echo "Failed to create object file."
             exit 1
           fi
 
@@ -35,3 +35,4 @@ jobs:
         with:
           name: rboot-binary-file
           path: firmware/rboot.bin
+          
